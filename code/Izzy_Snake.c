@@ -3,11 +3,11 @@ const int SIZE = 8;
 const int OFF = 0;
 const int RED = 1;
 const int GREEN = 2;
-const int ORANGE = 3;
+const int ORANGE = 3; //Orange doesn't work currently, and is not a separate colour, it's just red and green on at the same time
 
 const int POINT_COLOR = GREEN;
 const int SNAKE_COLOR = RED;
-const int BONOUS_COLOR = ORANGE;
+const int BONUS_COLOR = ORANGE;
 
 const int UP = 6;
 const int DOWN = 7;
@@ -18,19 +18,19 @@ const int MAX_LENGTH = 10;
 
 const int POINT_DELAY = 15;//The ticks after a point vanishes before a new point is generated
 const int POINT_LIFETIME = 20;//The amount of ticks before the next point is generated
-const int BONOUS_PROBABILITY = 25;//Out of 100
+const int BONUS_PROBABILITY = 25;//Out of 100
 const int TICK_DELAY = 500;//In MS
 
 int LED[SIZE][SIZE];
 int direction;
 int length;
-int bonous;
+int bonus;
 int X[MAX_LENGTH];
 int Y[MAX_LENGTH];
 
 int pointX;
 int pointY;
-bool bonousPoint;
+bool bonusPoint;
 int pointTicks;
 
 void setup() {
@@ -67,7 +67,7 @@ void pointTick() {
 	if (pointX == -1) {
 		if (pointTicks > POINT_DELAY) {
 			/**Generate new point**/
-			bonousPoint = random(100) <= BONOUS_PROBABILITY;
+			bonusPoint = random(100) <= bonus_PROBABILITY;
 			do {
 				pointX = random(SIZE);
 				pointY = random(SIZE);
@@ -78,7 +78,7 @@ void pointTick() {
 	} else if (pointTicks > POINT_LIFETIME) {
 		pointX = -1;
 		pointY = -1;
-		bonousPoint = false;
+		bonusPoint = false;
 		pointTicks = 0;
 	}
 	pointTicks++;
@@ -104,15 +104,15 @@ void resolveMatrixArray() {
 	}
 	if (pointX >= 0 && pointY >= 0) {
 		int color = POINT_COLOR;
-		if (bonousPoint) {
-			color = BONOUS_COLOR;
+		if (bonusPoint) {
+			color = bonus_COLOR;
 		}
 		LED[pointX][pointY] = color;
 	}
 	for (int i = 0; i < length; i++) {
 		int color = SNAKE_COLOR;
-		if (i < bonous) {
-			color = BONOUS_COLOR;
+		if (i < bonus) {
+			color = bonus_COLOR;
 		}
 		LED[X[i]][Y[i]] = color;
 	}
@@ -125,9 +125,9 @@ void resetGame() {
 	X[0] = SIZE/2;
 	Y[0] = SIZE/2;
 	pointX = -1;
-	bonous = 0;
+	bonus = 0;
 	pointTicks = 0;
-	bonousPoint = false;
+	bonusPoint = false;
 	pointY = -1;
 	direction = UP;
 }
@@ -142,8 +142,8 @@ void moveTo(int x, int y) {
 void add(int x, int y) {
 	X[length] = x;
 	Y[length] = y;
-	if (bonousPoint) {
-		bonous++;
+	if (bonusPoint) {
+		bonus++;
 	}
 	length++;
 }
