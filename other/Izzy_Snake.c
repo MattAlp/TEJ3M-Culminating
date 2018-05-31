@@ -1,4 +1,5 @@
- 
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 #include "LedControl.h"
 
 //The size of the LED Matrix
@@ -33,7 +34,12 @@ const int MAX_LENGTH = 10;
 const int DIN = 10;
 const int LOAD = 11;
 const int CLK = 12;
+
+
 LedControl lc = LedControl(DIN, CLK, LOAD, 1);
+LiquidCrystal_I2C lcd(0x3F, 20, 4);
+
+
 
 const int POINT_DELAY = 15;//The ticks after a point vanishes before a new point is generated
 const int POINT_LIFETIME = 20;//The amount of ticks before the next point is generated
@@ -77,7 +83,9 @@ void setup() {
   pinMode(DOWN, INPUT_PULLUP);
   pinMode(LEFT, INPUT_PULLUP);
   pinMode(RIGHT, INPUT_PULLUP);
-  srand((unsigned) time(&t));
+  lcd.init();
+  lcd.backlight();
+  //srand(null);
   Serial.begin(9600);
   Serial.print("Number of matrices: ");
   Serial.print((int) lc.getDeviceCount());
@@ -129,6 +137,12 @@ void updateMatrix() {
   The array goes from 0 to 8 in both x and y where 0, 0 is the bottom left corner and 7, 7 is the top right corner**/
 }
 
+void print(String text) {
+	lcd.clear();
+	lcd.setCursor(0, 0);
+	lcd.print(text);
+}
+
  //A method to check if a pin/button is pressed
 bool isPressed(int pin) {
   return digitalRead(pin) == LOW;
@@ -137,10 +151,13 @@ bool isPressed(int pin) {
 
 //The code to run when the game is over
 void gameOver() {
-  Serial.print("Game over\n");
+  print("Game Over")
+  lcd.setCursor(0, 1);
+  lcd.print("Points ");
+  lcd.print(getPoints());
   delay(3000);
   while (!isPressed(UP) && !isPressed(DOWN) && !isPressed(LEFT) && !isPressed(RIGHT)) {
-  	  delay(500);
+      delay(500);
   }
   resetGame();
   /**Fill in by malp**/
@@ -169,7 +186,7 @@ void pointTick() {
 }
 
 void resetPoint() {
-	pointX = -1;
+  pointX = -1;
     pointY = -1;
     bonousPoint = false;
     pointTicks = 0;
@@ -305,7 +322,7 @@ void gameTick() {
   }
   if (isPoint(x, y)) {
     add(x, y);
-	resetPoint();
+  resetPoint();
   } else if (isSafe(x,y)) {
     moveTo(x, y);
   } else {
