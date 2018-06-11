@@ -22,15 +22,15 @@ const int BONOUS_COLOR = ORANGE;
 //The Pin Number for button up
 const int UP = 4;
 //Pin number for down button
-const int DOWN = 5;
+const int DOWN = 7;
 //Pin number for left buttonn 
-const int LEFT = 7;
+const int LEFT = 6;
 //Pin number for right button
-const int RIGHT = 6;
+const int RIGHT = 5;
 
 const int POT_PIN = 15;
 //The max snake length
-const int MAX_LENGTH = 10;
+const int MAX_LENGTH = 30;
 
 const int DIRECTIONS_PER_TICK = 10;
 
@@ -75,8 +75,6 @@ bool bonousPoint;
 //The amount of ticks since the last point action
 int pointTicks;
 
-int GND[1] = {23};
-int VCC[1] = {22};
 
 
 
@@ -99,18 +97,8 @@ void setup() {
   Serial.print("Number of matrices: ");
   Serial.print((int) lc.getDeviceCount());
   Serial.print("\n");
-  for (int i = 0; i < sizeOf(GND); i++) {
-  	  pinMode(GND[i], OUTPUT);
-	  digitalWrite(GND[i], LOW);
-	  Serial.print(GND[i]);
-	  Serial.print(" = LOW\n");
-  }
-  for (int i = 0; i < sizeOf(VCC); i++) {
-  	  pinMode(VCC[i], OUTPUT);
-	  digitalWrite(VCC[i], HIGH);
-	  Serial.print(VCC[i]);
-	  Serial.print(" = HIGH\n");
-  }
+  gameOver();
+ 
   /**Malp, setup the LedControl stuff here**/
 }
 
@@ -123,14 +111,14 @@ void setupLC(int LC) {
 /////////////////////////////ISR Timer Functions ///////////////////////////
 ISR(TIMER2_COMPA_vect) {  //This ISR toggles shutdown between the 2MAX7221's
   if(maxInShutdown==RED){
-  		lc.shutdown(GREEN,true);  // The order here is critical - Shutdown first!
-  		lc.shutdown(RED,false);   // . . . Then restart the other.
-		maxInShutdown=GREEN;
+      lc.shutdown(GREEN,true);  // The order here is critical - Shutdown first!
+      lc.shutdown(RED,false);   // . . . Then restart the other.
+    maxInShutdown=GREEN;
   }
   else  {
-  		lc.shutdown(RED,true);
-		lc.shutdown(GREEN,false);
-		maxInShutdown=RED;
+      lc.shutdown(RED,true);
+    lc.shutdown(GREEN,false);
+    maxInShutdown=RED;
   }
 }  
  
@@ -167,28 +155,28 @@ void updateMatrix() {
   resolveMatrixArray();
   for (int x = 0; x < WIDTH; x++) {
     for (int y = 0; y < LENGTH; y++) {
-	  int x2 = 7-x;
-	  int y2 = 7-(y % 8);
-	  int green = GREEN;
-	  int red = RED;
-	  if (y >= 8) {
-		green = green+2;
-		red = red + 2;
-	  }
-	  /*Serial.print(x);
-	  Serial.print(", ");
-	  Serial.print(y);
-	  Serial.print(" = ");
-	  Serial.print(x2);
-	  Serial.print(", ");
-	  Serial.print(y2);
-	  Serial.print(" = ");
-	  Serial.print(red);
-	  Serial.print("&");
-	  Serial.print(green);
-	  Serial.print(" = ");
-	  Serial.print(LED[x][y]);
-	  Serial.print("\n");*/
+    int x2 = 7-x;
+    int y2 = 7-(y % 8);
+    int green = GREEN;
+    int red = RED;
+    if (y >= 8) {
+    green = green+2;
+    red = red + 2;
+    }
+    /*Serial.print(x);
+    Serial.print(", ");
+    Serial.print(y);
+    Serial.print(" = ");
+    Serial.print(x2);
+    Serial.print(", ");
+    Serial.print(y2);
+    Serial.print(" = ");
+    Serial.print(red);
+    Serial.print("&");
+    Serial.print(green);
+    Serial.print(" = ");
+    Serial.print(LED[x][y]);
+    Serial.print("\n");*/
       switch(LED[x][y]) {
         case OFF:
           setLed(red, x2, y2, false);
@@ -232,6 +220,8 @@ void gameOver() {
   lcd.print(getPoints());
   delay(3000);
   while (!isPressed(UP) && !isPressed(DOWN) && !isPressed(LEFT) && !isPressed(RIGHT)) {
+      lcd.setCursor(0, 0);
+    lcd.print("Hold to start");
       delay(500);
   }
   resetGame();
@@ -418,19 +408,19 @@ void runDelay() {
   //Serial.print("\n");
   for (int i = 0; i < DIRECTIONS_PER_TICK; i++) {
       updateDirection();
-	  delay(tickDelay);
-	  //Serial.print(tickDelay);
-	  //Serial.print("\n");
+    delay(tickDelay);
+    //Serial.print(tickDelay);
+    //Serial.print("\n");
   }
 }
 
 void updateLCD() {
-	lcd.setCursor(0, 0);
-	lcd.print("Snake Length: ");
-	lcd.print(length);
-	lcd.setCursor(0, 1);
-	lcd.print("Points ");
-	lcd.print(getPoints());
+  lcd.setCursor(0, 0);
+  lcd.print("Snake Length: ");
+  lcd.print(length);
+  lcd.setCursor(0, 1);
+  lcd.print("Points ");
+  lcd.print(getPoints());
 }
 
 //Run the game logic
