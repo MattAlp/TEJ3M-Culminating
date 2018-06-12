@@ -20,28 +20,33 @@ const int SNAKE_COLOR = RED;
 //The color to use for the bonous points
 const int BONOUS_COLOR = ORANGE;
 //The Pin Number for button up
-const int UP = 4;
+const int UP = 6;
 //Pin number for down button
-const int DOWN = 7;
+const int DOWN = 4;
 //Pin number for left buttonn 
-const int LEFT = 6;
+const int LEFT = 5;
 //Pin number for right button
-const int RIGHT = 5;
+const int RIGHT = 7;
 
 const int POT_PIN = 15;
 //The max snake length
-const int MAX_LENGTH = 30;
+const int MAX_LENGTH = 50;
 
-const int DIRECTIONS_PER_TICK = 10;
-
+//The amount  of times it checks which direction the player is pressing per game tick
+const int DIRECTIONS_PER_TICK = 50;
+//The pin for the Matrix Data In
 const int DIN = 8;
+//The clock pin
 const int CLK = 9;
+//The load pin
 const int LOAD = 10;
-
+//The color that is currently turned off (it alternates colors)
 int maxInShutdown=GREEN;                // tells which MAX7221 is currently off
+//The IRS time
 unsigned long ISRTime;      
-
+//The LedControl variable used to manipulate the matricies
 LedControl lc = LedControl(DIN, CLK, LOAD, 2);
+//The LCD display control variable
 LiquidCrystal_I2C lcd(0x3F, 20, 4);
 
 
@@ -57,7 +62,7 @@ int tickDelay;//In MS
 //The LED array
 int LED[WIDTH][LENGTH];
 //The direction that the snake is moving
-int direction;
+int direction = UP;
 //The length of the snake
 int length;
 //The amount of bonous points
@@ -75,39 +80,34 @@ bool bonousPoint;
 //The amount of ticks since the last point action
 int pointTicks;
 
+int record = 0;
 
 
 
-
-//The setup functiion
+/**
+ The setup function initilizes all the pins, sets up the LedMetrecies
+ Initlizes the LiquidCrystal_I2C
+**/
 void setup() {
+  //Resets the game
   resetGame();
-  setupLC(RED);
-  setupLC(GREEN);
-  setupLC(RED+2);
-  setupLC(GREEN+2);
+  lc.setIntensity(RED, 15);
+  lc.setIntensity(GREEN, 15);
   pinMode(UP, INPUT_PULLUP);
   pinMode(DOWN, INPUT_PULLUP);
   pinMode(LEFT, INPUT_PULLUP);
   pinMode(RIGHT, INPUT_PULLUP);
   lcd.init();
   lcd.backlight();
-  //srand(null);
-  Serial.begin(9600);
-  Serial.print("Number of matrices: ");
-  Serial.print((int) lc.getDeviceCount());
-  Serial.print("\n");
+  //When the game boots up set it to the GameOver menu
   gameOver();
  
   /**Malp, setup the LedControl stuff here**/
 }
 
-void setupLC(int LC) {
-  //lc.shutdown(LC, false);
-  lc.setIntensity(LC, 15);
-  //lc.clearDisplay(LC);
-}
 
+
+//The ISR is from the Internet, it turns on and off the two colors so that they are not on at the same time
 /////////////////////////////ISR Timer Functions ///////////////////////////
 ISR(TIMER2_COMPA_vect) {  //This ISR toggles shutdown between the 2MAX7221's
   if(maxInShutdown==RED){
@@ -116,12 +116,12 @@ ISR(TIMER2_COMPA_vect) {  //This ISR toggles shutdown between the 2MAX7221's
     maxInShutdown=GREEN;
   }
   else  {
-      lc.shutdown(RED,true);
+    lc.shutdown(RED,true);
     lc.shutdown(GREEN,false);
     maxInShutdown=RED;
   }
 }  
- 
+
 void setISRtimer(){  // setup ISR timer controling toggleing
   TCCR2A = 0x02;                        // WGM22=0 + WGM21=1 + WGM20=0 = Mode2 (CTC)
   TCCR2B = 0x05;                // CS22=1 + CS21=0 + CS20=1 = /128 prescaler (125kHz)
@@ -153,46 +153,26 @@ void loop() {
 void updateMatrix() {
   //Beforee updating the matrix update the Matrix LED array
   resolveMatrixArray();
+  //go through each x and y coordnate and prepare to set it
   for (int x = 0; x < WIDTH; x++) {
     for (int y = 0; y < LENGTH; y++) {
-    int x2 = 7-x;
-    int y2 = 7-(y % 8);
-    int green = GREEN;
-    int red = RED;
-    if (y >= 8) {
-    green = green+2;
-    red = red + 2;
-    }
-    /*Serial.print(x);
-    Serial.print(", ");
-    Serial.print(y);
-    Serial.print(" = ");
-    Serial.print(x2);
-    Serial.print(", ");
-    Serial.print(y2);
-    Serial.print(" = ");
-    Serial.print(red);
-    Serial.print("&");
-    Serial.print(green);
-    Serial.print(" = ");
-    Serial.print(LED[x][y]);
-    Serial.print("\n");*/
+	  //switch for the matrix that holds the colors and do the proper proccedure for each color
       switch(LED[x][y]) {
         case OFF:
-          setLed(red, x2, y2, false);
-          setLed(green, x2, y2, false);
+          setLed(RED, x, y, false);
+          setLed(GREEN, x, y, false);
           break;
         case RED:
-          setLed(red, x2, y2, true);
-          setLed(green,x2, y2, false);
+          setLed(RED, x, y, true);
+          setLed(GREEN,x, y, false);
           break;
         case GREEN:
-          setLed(red, x2, y2, false);
-          setLed(green, x2, y2, true);
+          setLed(RED, x, y, false);
+          setLed(GREEN, x, y, true);
           break;
         case ORANGE:
-          setLed(red, x2, y2, true);
-          setLed(green, x2, y2, true);
+          setLed(RED, x, y, true);
+          setLed(GREEN, x, y, true);
           break;
       }
     }
@@ -211,19 +191,40 @@ bool isPressed(int pin) {
 
 //The code to run when the game is over
 void gameOver() {
+  //clear the LCD
   lcd.clear();
+  //Set the cursor to the top left
   lcd.setCursor(0, 0);
+  int points = getPoints();
+  //Print that the game is over
   lcd.print("Game Over");
   //print("Game Over");
   lcd.setCursor(0, 1);
-  lcd.print("Points ");
-  lcd.print(getPoints());
-  delay(3000);
-  while (!isPressed(UP) && !isPressed(DOWN) && !isPressed(LEFT) && !isPressed(RIGHT)) {
-      lcd.setCursor(0, 0);
-    lcd.print("Hold to start");
-      delay(500);
+  //If it is a new record, set the record and display it
+   if (points > record) {
+  	  lcd.print("New Record: ");
+	  record = points;
+  } else {
+	    lcd.print("Points: ");
   }
+  lcd.print(points);
+  //Play the trippy game over effect
+  for (int x = 0; x < LENGTH; x++) {
+  	  for (int y = 0; y < WIDTH; y++) {
+	  	  setLed(GREEN, x, y, true);
+		  setLed(RED, LENGTH-x-1, WIDTH-y-1, true);
+		  delay(10);
+	  }
+  }
+   lcd.setCursor(0, 0);
+   //Tell the user to press any button to start the next game
+   lcd.print("Press Any Button");
+  while (!isPressed(UP) && !isPressed(DOWN) && !isPressed(LEFT) && !isPressed(RIGHT)) {
+      delay(10);
+	  //Wait for the next button press
+	  updateDirection();
+  }
+  //Reset the game info and start the game
   resetGame();
   /**Fill in by malp**/
 }
@@ -231,22 +232,29 @@ void gameOver() {
 
 //A method to tick the point, randomly makes new points and removes them after specified delays
 void pointTick() {
+  //If the point is not currently on the screan
   if (pointX == -1) {
+	//If the point has not been on long enough to add
     if (pointTicks > POINT_DELAY) {
+	  //randomly decide if it is a bonous point
       bonousPoint = random(100) <= BONOUS_PROBABILITY;
       do {
-        pointX = random(WIDTH);
+        pointX = random(WIDTH);//randomly generate the point coordnates
         pointY = random(LENGTH);
       }
+	  //keep doing this until a safe point is generated
       while(!isSafe(pointX, pointY));
+	  //reset the point ticks
       pointTicks = 0;
     }
   } else if (pointTicks > POINT_LIFETIME) {
+    //call on the method to reset the  points
     resetPoint();
   }
+  //increase the point ticks by 1
   pointTicks++;
 }
-
+//The method to reset the point to not existing
 void resetPoint() {
     pointX = -1;
     pointY = -1;
@@ -256,6 +264,7 @@ void resetPoint() {
 
 //A method for updating the direction the snake is facing
 int updateDirection() {
+  //check each of the four directions to see if it is pressed
   if (isPressed(UP)) {
     direction = UP;
   } else if (isPressed(DOWN)) {
@@ -294,34 +303,40 @@ void resolveMatrixArray() {
 
 //The method to clear/reset the game, initilizes all the variables
 void resetGame() {
+  //clear the snake location array
   clearArray(X);
   clearArray(Y);
+  //reset the snake length to 1
   length = 1;
+  //set the snake's starting position to the center
   X[0] = WIDTH/2;
   Y[0] = LENGTH/2;
-  pointX = -1;
+  //reset the point
+  resetPoint();
+  //reset the player's bonous points'
   bonous = 0;
-  pointTicks = 0;
-  bonousPoint = false;
-  pointY = -1;
-  direction = UP;
+  //update the LCD
   updateLCD();
 }
 //A method to move the snake to a point
 void moveTo(int x, int y) {
   shiftArray(X, length);
   shiftArray(Y, length);
+  //shift the array of the snake so that all the points are moved back one and the last point is truncated
   X[length-1] = x;
   Y[length-1] = y;
+  //set the new head location to the point that you moved to
 }
 //A method to add a new point to the snake
 void add(int x, int y) {
+  //add the given x and y cords to the array
   X[length] = x;
   Y[length] = y;
   if (bonousPoint) {
-    bonous++;
+    bonous++;//if the point they got to grow is a bonous point increment the bonous counter
   }
-  length++;
+  length++;//Increase the snake's length
+  //update the LCD
   updateLCD();
   
 }
@@ -403,11 +418,11 @@ int getPoints() {
 }
 
 void runDelay() {
-  tickDelay = analogRead(POT_PIN)/DIRECTIONS_PER_TICK;
+  tickDelay = (analogRead(POT_PIN)/3)/DIRECTIONS_PER_TICK;
   //Serial.print(tickDelay);
   //Serial.print("\n");
   for (int i = 0; i < DIRECTIONS_PER_TICK; i++) {
-      updateDirection();
+    updateDirection();
     delay(tickDelay);
     //Serial.print(tickDelay);
     //Serial.print("\n");
@@ -415,12 +430,18 @@ void runDelay() {
 }
 
 void updateLCD() {
+  lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Snake Length: ");
-  lcd.print(length);
+  int points = getPoints();
+  if (points < record) {
+	lcd.print("Record: ");
+	lcd.print(record);
+  } else {
+  	  lcd.print("New Record!");
+  }
   lcd.setCursor(0, 1);
-  lcd.print("Points ");
-  lcd.print(getPoints());
+  lcd.print("Points: ");
+  lcd.print(points);
 }
 
 //Run the game logic
