@@ -23,8 +23,8 @@ const int ORANGE = 2;
 const int POINT_COLOR = GREEN;
 //The color to use for the snake
 const int SNAKE_COLOR = RED;
-//The color to use for the bonous points
-const int BONOUS_COLOR = ORANGE;
+//The color to use for the bonus points
+const int BONUS_COLOR = ORANGE;
 //The Pin Number for button up
 const int UP = 6;
 //Pin number for down button
@@ -59,7 +59,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 
 const int POINT_DELAY = 6;//The ticks after a point vanishes before a new point is generated
 const int POINT_LIFETIME = 20;//The amount of ticks before the next point is generated
-const int BONOUS_PROBABILITY = 15;//Out of 100
+const int BONUS_PROBABILITY = 15;//Out of 100
 
 //The static constant for the game Snake
 const int SNAKE = 0;
@@ -76,8 +76,8 @@ int LED[WIDTH][LENGTH];
 int direction = UP;
 //The length of the snake
 int length;
-//The amount of bonous points
-int bonous;
+//The amount of bonus points
+int bonus;
 //The X positions of the snake
 int X[MAX_LENGTH];
 //The Y positions of the snake
@@ -86,8 +86,8 @@ int Y[MAX_LENGTH];
 int pointX;
 //The y cords of the point
 int pointY;
-//Weather or not the point is a bonous point
-bool bonousPoint;
+//Weather or not the point is a bonus point
+bool bonusPoint;
 //The amount of ticks since the last point action
 int pointTicks;
 
@@ -275,8 +275,8 @@ void pointTick() {
   if (pointX == -1) {
   //If the point has not been on long enough to add
     if (pointTicks > POINT_DELAY) {
-    //randomly decide if it is a bonous point
-      bonousPoint = random(100) <= BONOUS_PROBABILITY;
+    //randomly decide if it is a bonus point
+      bonusPoint = random(100) <= BONUS_PROBABILITY;
       do {
         pointX = random(WIDTH);//randomly generate the point coordnates
         pointY = random(LENGTH);
@@ -297,7 +297,7 @@ void pointTick() {
 void resetPoint() {
     pointX = -1;
     pointY = -1;
-    //bonousPoint = false;
+    //bonusPoint = false;
     pointTicks = 0;
 }
 
@@ -325,16 +325,16 @@ void resolveMatrixArraySnake() {
   //Set the point on the screen to it's color if there is one'
   if (pointX >= 0 && pointY >= 0) {
     int color = POINT_COLOR;
-    if (bonousPoint) { 
-      color = BONOUS_COLOR;
+    if (bonusPoint) { 
+      color = BONUS_COLOR;
     }
     LED[pointX][pointY] = color;
   }
   //Add the snake to the  array
   for (int i = 0; i < length; i++) {
     int color = SNAKE_COLOR;
-    if (i < bonous) {
-      color = BONOUS_COLOR;
+    if (i < bonus) {
+      color = BONUS_COLOR;
     }
     LED[X[i]][Y[i]] = color;
   }
@@ -352,8 +352,8 @@ void resetSnake() {
   Y[0] = LENGTH/2;
   //reset the point
   resetPoint();
-  //reset the player's bonous points'
-  bonous = 0;
+  //reset the player's bonus points'
+  bonus = 0;
   //update the LCD
   //updateLCD();
 }
@@ -371,8 +371,8 @@ void add(int x, int y) {
   //add the given x and y cords to the array
   X[length] = x;
   Y[length] = y;
-  if (bonousPoint) {
-    bonous++;//if the point they got to grow is a bonous point increment the bonous counter
+  if (bonusPoint) {
+    bonus++;//if the point they got to grow is a bonus point increment the bonus counter
   }
   length++;//Increase the snake's length
   //update the LCD
@@ -453,8 +453,8 @@ int sizeOf(int * a) {
 
 //Get the amount of points a player has
 int getPoints() {
-  if (game == SNAKE) {//If snake the points is the length + the bonous points
-     return length + bonous;
+  if (game == SNAKE) {//If snake the points is the length + the bonus points
+     return length + bonus;
   } else if (game == DODGE) {//If the game is doge its the amount of points variable
       return points;
   }
