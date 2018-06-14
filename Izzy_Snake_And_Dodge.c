@@ -1,3 +1,9 @@
+/**Made by Izzy and malp
+   Izzy made the game logic and Malp programmed the interface with the hardware (i.e Buttons, Matrix, LCD)
+   See the header of SnakeTick and DodgeTick for the game logic**/
+
+
+
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include "LedControl.h"
@@ -55,9 +61,11 @@ const int POINT_DELAY = 6;//The ticks after a point vanishes before a new point 
 const int POINT_LIFETIME = 20;//The amount of ticks before the next point is generated
 const int BONOUS_PROBABILITY = 15;//Out of 100
 
-
+//The static constant for the game Snake
 const int SNAKE = 0;
+//The static constant for the game Dodge
 const int DODGE = 1;
+//The variable that stores the current game, -1 for no game selected
 int game = -1;
 
 
@@ -89,10 +97,16 @@ int records[2];
 
 
 //The Dodge Variables
+//The amount of points you have
 int points = 0;
+//The position x
 int posX;
+//The position in y
 int posY;
+//The directions of each bullet
 int directions[MAX_LENGTH];
+
+const int BULLET_SPAWN_PROBABILITY = 33;//the probability of a bullet spawnning in dodge
 
 
 
@@ -150,7 +164,11 @@ void stopISR(){    // Stops the ISR
   TIMSK2&=~(1<<OCIE2A);                  // disable interrupts
 }
 
-//The  loop function
+/**
+  The core method that ticks in a loop. If checks which game is
+  currently active and then deffers the game logic to that game's tick method. 
+  After that it updates the LCD and runs the delay. Those methods are common for both games
+  If no game is selected it will go to the game selection menu**/
 void loop() {
   //Run the game logic
   if (game == SNAKE) {
@@ -432,20 +450,20 @@ bool isSafe(int x, int y) {
   }
   return x >= 0 && x < WIDTH && y>= 0 && y < LENGTH;
 }
-
+//Take the size of the array and divide it by the size of the first element to get the amount of elements
 int sizeOf(int * a) {
   return sizeof(a) / sizeof(a[0]);
 }
 
 //Get the amount of points a player has
 int getPoints() {
-  if (game == SNAKE) {
+  if (game == SNAKE) {//If snake the pooints is the length + the bonous points
      return length + bonous;
-  } else if (game == DODGE) {
+  } else if (game == DODGE) {//If the game is doge its the amount of points variable
       return points;
   }
 }
-
+//Run the delay between game ticks
 void runDelay() {
   tickDelay = (analogRead(POT_PIN)/3)/DIRECTIONS_PER_TICK;
   //Serial.print(tickDelay);
@@ -457,10 +475,11 @@ void runDelay() {
     //Serial.print("\n");
   }
 }
-
+//Update the LCD and clear the previous display
 void updateLCD() {
 	updateLCD(true);
 }
+//Update the LCD Display
 void updateLCD(bool clear) {
   if (clear) {
       lcd.clear();
@@ -478,7 +497,15 @@ void updateLCD(bool clear) {
   lcd.print(points);
 }
 
-//Run the game logic
+/**
+  The core method that decides how the snake game logic should work
+  First updates the food pellets on the screen that the snake needs to eat to grow
+  Then it gets the current position of the snake head and decides where the snake is moving to
+  If that position is a point, add it to the SNAKE
+  If it is not a point but it is a valid location then move the snake there
+  If it is not safe then the game is over so call the universal game over method that runs for both games
+  Update the LCD without clearing it so there is no flickering, due to the number on the screen always growing there is no underflow
+**/
 void snakeTick() {
   pointTick();
   int x = getX();
@@ -501,33 +528,33 @@ void snakeTick() {
   updateLCD(false);
 
 }
-
+//The method to select which game is active
 void selectGame() {
-   lcd.clear();
+   lcd.clear();//Print to the screen the game options
    lcd.setCursor(0, 0);
    //Tell the user to press any button to start the next game
    lcd.print("Right = SNAKE");
    lcd.setCursor(0, 1);
    lcd.print("Left = DODGE");
-  while (!isPressed(UP) && !isPressed(DOWN)) {
+  while (!isPressed(UP) && !isPressed(DOWN)) {//wait for a press that decides which game to select
       delay(10);
   }
-  updateDirection();
-  if (direction == UP) {
+  updateDirection();//update the direction based on the clicked button
+  if (direction == UP) {//if they selected snake, the game is snake
   	  game = SNAKE;
-  } else if (direction == DOWN) {
+  } else if (direction == DOWN) {//if they selected dodge, the game is dodge
       game = DODGE;
-	  updateLCD();
+	  updateLCD();//update the LCD for dodge
   }
-  reset();
+  reset();//reset the game logic
 }
-
+//A method to spawn in a bullet in dodge randomly
 void spawnBullet() {
-  int pos = random(WIDTH);
+  int pos = random(WIDTH);//choose how far along the grid it is spawning
   int x;
   int y;
   int dir;
-  int r = random(4);
+  int r = random(4);//choose which side it is spawning from and adjust the direction and position acordingly
   switch (r) {
     case 0:
        dir = DOWN;
@@ -551,87 +578,89 @@ void spawnBullet() {
        break;
     default: break;
   }
-  int empty = -1;
-  for (int i = 0; i < length+1 && i < MAX_LENGTH; i++) {
-    if (X[i] == -1 || i == length) {
-      empty = i;
+  int empty = -1;//the ID of the first empty position in the snake array
+  for (int i = 0; i < length+1 && i < MAX_LENGTH; i++) {//go through each position
+    if (X[i] == -1 || i == length) {//if the position is empty
+      empty = i;//Set the empty to the current value
       if (empty >= length) {
-        length = empty+1;
-      }
+        length = empty+1;//increase the length of the array if needed
+      }//escape from the loop
       break;
     }
   }
-  X[empty] = x;
+  X[empty] = x;//set the bullet array to store the bullet location
   Y[empty] = y;
-  directions[empty] = dir;
+  directions[empty] = dir;//store the bullet velocity
 }
 
-
+/**
+The core function of the Dodge game, the game moves the players, checks if they hit a bullet, moves the bullets, checks if they hit a player, adds new bullets, and updates the screen
+**/
 void dodgeTick() {
-   movePlayer();
-   moveBullets();
-   spawnBullets();
-   updateLCD(false);
+   movePlayer();//Update the player position
+   moveBullets();//Move all the bullets
+   spawnBullets();//Spawn the new bullets if needed
+   updateLCD(false);//Update the LCD without clearing to account for rapid point changes
 }
 
-const int BULLET_SPAWN_PROBABILITY = 33;
+//The spawn bullets command
 void spawnBullets() {
-	if (random(100) < BULLET_SPAWN_PROBABILITY + points/10) {
-		spawnBullet();
+	if (random(100) < BULLET_SPAWN_PROBABILITY + points/10) {//Randomly decides if it should spawn a bullet based on probability
+		spawnBullet();//If it did decide to spawn one, actually call the spawn function
 	}
 }
-
+//Move the player's position'
 void movePlayer() {
   int x = posX;
-  int y = posY;
-  switch(direction) {
+  int y = posY;//get their current positions
+  switch(direction) {//Update their position based on the clicked direction
     case UP:y++;break;
     case DOWN:y--;break;
     case LEFT:x--;break;
     case RIGHT:x++;break;
   }
-  if (!isSafe(x, y)) {
+  if (!isSafe(x, y)) {//If the new position is not a valid position then the game is over, call the universal game over method
     gameOver();
 	return;
   } else {
-     posX = x;
+     posX = x;//If the position is valid, update the position and record they survived another tick/point
      posY = y;
      points++;
   }
 }
-
+//A function to move the bullets
 void moveBullets() {
   for (int i = 0; i < length; i++) {
-    if (X[i] != -1) {
+    if (X[i] != -1) {//go through each bullet, if it is not null then select it
       int x = X[i];
-      int y = Y[i];
+      int y = Y[i];//get its position and direction
       int dir = directions[i];
-      switch(dir) {
+      switch(dir) {//update its position based on direction
         case UP:y++;break;
         case DOWN:y--;break;
         case LEFT:x--;break;
         case RIGHT:x++;break;
       }
-	  if (x == posX && y == posY) {
+	  if (x == posX && y == posY) {//If they crashed into the player, game is over
 	  	  gameOver();
 		  return;
-	  } else if (isSafe(x, y)) {
+	  } else if (isSafe(x, y)) {//If they are safe, update the position
         X[i] = x;
         Y[i] = y;
       } else {
-        X[i] = -1;
+        X[i] = -1;//If it is not safe (i.e off screen or hit another bullet) then remove the bullet from the array
         Y[i] = -1;
       }
     }
   }
 }
-
+//Resolve the dodge game logic into an array to display on the matrix
 void resolveMatrixArrayDodge() {
-  resolveMatrixArraySnake();
-  LED[posX][posY] = POINT_COLOR;
+  resolveMatrixArraySnake();//Beacuse dodge stores bullets in the same array as Snake stores the snake, it can calll tghe Snake resolve function without re-programming it
+  LED[posX][posY] = POINT_COLOR;//Add thhe dodge player to the array
 }
 
-void resetDodge() {
+void resetDodge() {//To reset dodge reset the position and clear the direcctions array and reset the points
  // resetSnake();
   posX = WIDTH/2;
   posY = LENGTH/2;
