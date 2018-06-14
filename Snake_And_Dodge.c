@@ -1,9 +1,9 @@
-/**Made by Izzy and malp
-   Izzy made the game logic and Malp programmed the interface with the hardware (i.e Buttons, Matrix, LCD)
+/**Made by Izzy and Matthew
+   Izzy made the game logic and Matthew programmed the interface with the hardware (i.e Buttons, Matrix, LCD)
    See the header of SnakeTick and DodgeTick for the game logic**/
 
 
-
+//Include external libraries for interfacing with LED Matrix, LCD Display
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include "LedControl.h"
@@ -130,7 +130,6 @@ void setup() {
   Serial.print("Game has started up\n");
   //When the game boots up set it to the GameOver menu
   //selectGame();
-  /**Malp, setup the LedControl stuff here**/
 }
 
 //The ISR is from the Internet, it turns on and off the two colors so that they are not on at the same time
@@ -220,16 +219,14 @@ void updateMatrix() {
       }
     }
   } 
-  /**Fill in by malp
-  The array you need is LED[x][y] where x and y = 8
+  /**
   Values for LED[x][y] will either be OFF, RED, GREEN, ORANGE which are integer constants. LED[x][y] is an 2D int array
-  The array goes from 0 to 8 in both x and y where 0, 0 is the bottom left corner and 7, 7 is the top right corner**/
+  The array goes from 0 to 8 in both x and y where 0, 0 is the bottom left corner and 7, 7 is the top right corne**/
 }
 
  //A method to check if a pin/button is pressed
 bool isPressed(int pin) {
   return digitalRead(pin) == LOW;
-  /**Fill in by malp**/
 }
 
 //The code to run when the game is over
@@ -263,7 +260,6 @@ void gameOver() {
   //Reset the game info and start the game
   //selectGame();
   game = -1;
-  /**Fill in by malp**/
 }
 
 
@@ -457,7 +453,7 @@ int sizeOf(int * a) {
 
 //Get the amount of points a player has
 int getPoints() {
-  if (game == SNAKE) {//If snake the pooints is the length + the bonous points
+  if (game == SNAKE) {//If snake the points is the length + the bonous points
      return length + bonous;
   } else if (game == DODGE) {//If the game is doge its the amount of points variable
       return points;
